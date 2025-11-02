@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}ملفي الشخصي{% endblock %}
+
+{% block head %}
+<style>
+:root{
+  --bg:#f6fbff; --txt:#0E1A2B; --muted:#7386a3;
+  --mint:#12B07A; --teal:#0C8F79; --blue:#1E5AA6; --white:#fff;
+  --radius:18px;
+}
+html[data-theme="dark"]{
+  --bg:#0b1220; --txt:#e6f0ff; --muted:#9fb1c8; --white:#0f172a;
+}
+body{color:var(--txt);background:var(--bg);transition:.4s}
+.navbar{display:none!important}
+.wrap{max-width:900px;margin:40px auto;padding:0 18px;text-align:center}
+.card{background:var(--white);border-radius:var(--radius);padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.06);}
+h2{font-weight:900;margin-bottom:6px;color:var(--txt);}
+p{color:var(--muted);}
+.btn{
+  border:none;border-radius:12px;padding:10px 16px;font-weight:800;cursor:pointer;
+  background:linear-gradient(90deg,#1E5AA6,#0C8F79);color:#fff;
+  box-shadow:0 8px 18px rgba(30,90,166,.25);transition:.2s;
+}
+.btn:hover{transform:scale(1.03);}
+.kpi{margin-top:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.kpi div{padding:12px;border-radius:12px;background:var(--bg);}
+.theme-toggle{
+  position:absolute;top:16px;left:16px;padding:8px 12px;border-radius:10px;
+  background:var(--white);border:1px solid #e6ebf3;cursor:pointer;font-weight:800;
+}
+html[data-theme="dark"] .theme-toggle{background:#0f172a;color:#e6f0ff;}
+</style>
+{% endblock %}
+
+{% block content %}
+<button id="themeToggle" class="theme-toggle">🌙</button>
+<div class="wrap">
+  <div class="card">
+    <h2 id="userLabel" data-i18n="profile_welcome">مرحبًا، —</h2>
+    <p data-i18n="profile_subtitle">تابعي نقاطك اليومية وتقدّمك الأمني 👇</p>
+    <div class="kpi">
+      <div><strong data-i18n="profile_level">المستوى</strong><div id="lvl">—</div></div>
+      <div><strong data-i18n="profile_points">النقاط</strong><div id="pts">—</div></div>
+      <div><strong data-i18n="profile_streak">السلسلة 🔥</strong><div id="str">—</div></div>
+    </div>
+    <div style="margin-top:20px;">
+      <button id="claimBtn" class="btn" data-i18n="profile_claim">مطالبة مكافأة اليوم</button>
+    </div>
+    <div style="margin-top:18px;">
+      <button id="logoutBtn" class="btn" style="background:#ef4444;" data-i18n="profile_logout">تسجيل خروج</button>
+      <a href="{{ url_for('index') }}" class="btn" style="margin-left:10px;" data-i18n="profile_home">الرئيسية ↩</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function(){
+  const themeBtn=document.getElementById('themeToggle');
+  const root=document.documentElement;
+  const apply=t=>{
+    root.setAttribute('data-theme',t);
+    localStorage.setItem('theme',t);
+    themeBtn.textContent=(t==='dark'?'☀️':'🌙');
+  };
+  apply(localStorage.getItem('theme')||'light');
+  themeBtn.onclick=()=>apply(root.getAttribute('data-theme')==='dark'?'light':'dark');
+
+  const r=await fetch('/api/auth/session',{credentials:'include'});
+  const d=await r.json();
+  if(!d.logged_in){window.location.href='/login';return;}
+
+  document.getElementById('userLabel').textContent='مرحبًا، '+d.username;
+
+  const res=await fetch('/api/gamify/status',{credentials:'include'});
+  const g=await res.json();
+  if(!g.is_guest){
+    document.getElementById('lvl').textContent=g.level;
+    document.getElementById('pts').textContent=g.points;
+    document.getElementById('str').textContent=g.streak;
+  }
+
+  document.getElementById('logoutBtn').onclick=async()=>{
+    await fetch('/api/auth/logout',{method:'POST',credentials:'include'});
+    window.location.href='/login';
+  };
+
+  document.getElementById('claimBtn').onclick=async()=>{
+    const c=await fetch('/api/claim-daily',{method:'POST',credentials:'include'});
+    const j=await c.json();
+    if(j.ok){alert('🎉 تمت المطالبة بنجاح +'+j.added+' نقطة');location.reload();}
+    else{alert('⚠️ '+j.error);}
+  };
+})();
+</script>
+{% endblock %}

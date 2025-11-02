@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="title">{% block title %}CSAURA{% endblock %}</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      margin: 0;
+      background-color: #f8fafc;
+      color: #0f172a;
+      direction: rtl;
+      text-align: right;
+      transition: all 0.3s ease;
+    }
+    nav {
+      background: linear-gradient(90deg, #0284c7, #0ea5e9);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      flex-wrap: wrap;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: 700;
+      margin: 5px 10px;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    #langToggle {
+      background: white;
+      color: #0f172a;
+      border: none;
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+    #langToggle:hover {
+      background: #f1f5f9;
+      transform: translateY(-2px);
+    }
+    main {
+      padding: 20px;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+
+  <!-- ✅ شريط علوي ثابت -->
+  <nav>
+    <div>
+      <a href="{{ url_for('index') }}" data-i18n="nav_home">الرئيسية</a>
+      <a href="{{ url_for('quiz_page') }}" data-i18n="nav_quiz">اختبار أمني</a>
+      <a href="{{ url_for('password_page') }}" data-i18n="nav_password">تحليل كلمة مرور</a>
+      <a href="{{ url_for('url_page') }}" data-i18n="nav_url">تحليل روابط</a>
+      <a href="{{ url_for('email_page') }}" data-i18n="nav_email">تحليل بريد</a>
+      {% if g.user_id and g.role == 'admin' %}
+      <a href="{{ url_for('admin_panel') }}" data-i18n="nav_admin">لوحة الإدارة</a>
+      {% endif %}
+    </div>
+    <button id="langToggle">🌐 English</button>
+  </nav>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+
+  <!-- ✅ سكربت إدارة اللغة -->
+  <script>
+  const LANG_KEY = 'site_lang';
+  let currentLang = localStorage.getItem(LANG_KEY) || 'ar';
+
+  async function loadLang(lang) {
+    try {
+      const res = await fetch(`/static/lang/${lang}.json`);
+      const dict = await res.json();
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+      localStorage.setItem(LANG_KEY, lang);
+      document.documentElement.lang = lang;
+      document.body.style.fontFamily = lang === 'ar' ? 'Cairo, sans-serif' : 'Poppins, sans-serif';
+      document.getElementById('langToggle').textContent = lang === 'ar' ? '🌐 English' : '🌐 العربية';
+    } catch (err) {
+      console.error('Language load error:', err);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('langToggle').addEventListener('click', () => {
+      currentLang = currentLang === 'ar' ? 'en' : 'ar';
+      loadLang(currentLang);
+    });
+    loadLang(currentLang);
+  });
+  </script>
+
+</body>
+</html>

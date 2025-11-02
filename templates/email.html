@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+{% block title %}تحليل الرسائل{% endblock %}
+
+{% block head %}
+<style>
+  /* ثيمين: داكن افتراضي + لايت عند data-theme="light" */
+  :root{
+    --bg:#0f172a; --card:#0b1220; --text:#e6f0ff; --muted:#94a3b8;
+    --border:1px solid rgba(148,163,184,.18);
+  }
+  html[data-theme="light"]{
+    --bg:#f6fbff; --card:#ffffff; --text:#0f172a; --muted:#6b7280;
+    --border:1px solid #e6eef6;
+  }
+  body{ background:var(--bg); color:var(--text); }
+
+  /* نخفي النافبار هنا، ونكتفي بزر الرجوع */
+  .navbar{ display:none !important; }
+
+  /* الحاوية */
+  #mail-page{ max-width: 860px; margin: 26px auto 34px; padding: 0 16px; }
+
+  .title{ display:flex; gap:10px; align-items:center; justify-content:center; margin:4px 0 6px; }
+  .title .ico{ font-size:30px; filter:drop-shadow(0 6px 16px rgba(0,0,0,.12)); }
+  .subtitle{ text-align:center; color:var(--muted); margin:0 0 16px; }
+
+  /* كرت + عناصر */
+  .card{ background:var(--card); border:var(--border); border-radius:18px; box-shadow:0 14px 30px rgba(0,0,0,.08); padding:16px; }
+
+  .grid{ display:grid; gap:10px; }
+  @media (min-width:720px){
+    .grid.cols-2{ grid-template-columns: 2fr 1fr; }
+  }
+  .input{ width:100%; padding:12px 14px; border-radius:12px; border:var(--border); background:var(--card); color:var(--text); outline:none; transition:.2s; }
+  .input:focus{ box-shadow:0 0 0 3px rgba(99,102,241,.18); border-color:rgba(99,102,241,.45); }
+  textarea.input{ min-height:160px; resize:vertical; }
+
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+  .icon-btn, .btn{
+    padding:11px 14px; border-radius:12px; border:var(--border);
+    background:var(--card); color:var(--text); cursor:pointer; transition:.2s;
+  }
+  .btn.primary{
+    border:none; color:#fff; background:linear-gradient(90deg,#6366F1,#3B82F6);
+    box-shadow:0 12px 24px rgba(59,130,246,.25); font-weight:800;
+  }
+  .icon-btn:hover, .btn:hover{ transform: translateY(-1px); }
+  .btn.loading{ opacity:.7; cursor:not-allowed; }
+
+  /* العداد */
+  .meter{ height:10px; background:rgba(125,125,125,.18); border:var(--border);
+          border-radius:999px; overflow:hidden; margin:10px 0 8px; }
+  .meter .fill{ height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#10b981); transition:width .35s; }
+
+  /* الشارة والchips */
+  .verdict{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .badge{ padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:var(--card); font-weight:900; }
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{ padding:6px 10px; border-radius:999px; border:var(--border); background:var(--card); }
+  .chip:hover{ transform: translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,.12); }
+
+  /* إبراز الكلمات */
+  .hl{ background: rgba(239,68,68,.12); color: var(--text); border-radius:6px; padding:2px 4px; }
+
+  /* شريط علوي: رجوع + ثيم */
+  .topbar{ display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:8px; }
+  .back{ display:inline-flex; align-items:center; gap:6px; font-weight:700; }
+  .back .arr{ transform: scaleX(-1); }
+  .theme{
+    padding:8px 12px; border-radius:12px; border:var(--border);
+    background:var(--card); color:var(--text); cursor:pointer; font-weight:800;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="mail-page">
+
+  <!-- شريط علوي: رجوع + تبديل الثيم -->
+  <div class="topbar">
+    <a class="back" href="{{ url_for('index') }}"><span class="arr">↩</span> <span data-i18n="quiz_back">رجوع</span></a>
+    <button id="page-theme" class="theme" type="button" data-i18n="quiz_theme">🌙 وضع داكن</button>
+  </div>
+
+  <div class="title">
+    <div class="ico">📧</div>
+    <h1 class="page-title" style="margin:0" data-i18n="mail_title">تحليل الرسائل</h1>
+  </div>
+  <p class="subtitle" data-i18n="mail_subtitle">أدخلي تفاصيل الرسالة لتحليل مؤشرات التصيّد والاحتيال.</p>
+
+  <div id="mail-card" class="card">
+
+    <!-- أدوات سريعة -->
+    <div class="row" style="justify-content:flex-end; margin-bottom:6px">
+      <button id="pasteBtn" class="icon-btn" title="لصق من الحافظة"><span data-i18n="btn_paste">📋 لصق</span></button>
+      <button id="clearBtn" class="icon-btn" title="مسح"><span data-i18n="btn_clear">✖ مسح</span></button>
+    </div>
+
+    <!-- الحقول -->
+    <div class="grid cols-2">
+      <input id="sender"  class="input" type="text" placeholder="عنوان المرسل (مثال: admin@paypal.com)" data-i18n-placeholder="mail_sender_ph">
+      <input id="subject" class="input" type="text" placeholder="الموضوع" data-i18n-placeholder="mail_subject_ph">
+    </div>
+    <textarea id="body" class="input" placeholder="محتوى الرسالة" data-i18n-placeholder="mail_body_ph"></textarea>
+
+    <!-- أزرار الإجراء -->
+    <div class="row" style="justify-content:flex-end; margin-top:6px">
+      <button id="analyzeBtn" class="btn primary" data-i18n="btn_analyze">تحليل</button>
+    </div>
+
+    <!-- عداد -->
+    <div class="meter" id="meter" hidden>
+      <div id="bar" class="fill"></div>
+    </div>
+
+    <!-- نتيجة مختصرة + Chips -->
+    <div class="verdict" id="verdictWrap" hidden>
+      <span id="badge" class="badge">—</span>
+      <span id="scoreText" class="muted"><span data-i18n="score_label">الدرجة:</span> —</span>
+    </div>
+    <div id="chips" class="chips" hidden></div>
+
+    <!-- إبراز كلمات مشبوهة من النص -->
+    <div id="hlBox" class="card" style="margin-top:10px; display:none">
+      <div class="muted" style="margin-bottom:6px" data-i18n="mail_words_noticed">كلمات لُوحظت في النص:</div>
+      <div id="hlWords"></div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* زر اللايت/الدارك */
+(function(){
+  const KEY='page_theme';
+  const root=document.documentElement;
+  const btn=document.getElementById('page-theme');
+  function apply(mode){
+    root.setAttribute('data-theme', mode);
+    localStorage.setItem(KEY, mode);
+    // النص يُترجم لاحقًا عبر i18n، لكن نحافظ على fallback بصري هنا
+    const isDark = (mode==='dark');
+    if(!btn.dataset.i18n){ btn.textContent = isDark ? '☀️ وضع نهاري' : '🌙 وضع داكن'; }
+  }
+  const saved = localStorage.getItem(KEY) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  apply(saved);
+  btn.addEventListener('click', ()=> apply(root.getAttribute('data-theme')==='dark' ? 'light' : 'dark'));
+  window.addEventListener('storage', e=>{ if(e.key===KEY && (e.newValue==='dark'||e.newValue==='light')) apply(e.newValue); });
+})();
+</script>
+
+<script>
+/* ===== طبقة i18n للصفحة (تستمد اللغة من localStorage('site_lang')) ===== */
+(function(){
+  const LANG_KEY = 'site_lang';
+  let DICT = {};
+  let CUR = localStorage.getItem(LANG_KEY) || 'ar';
+
+  function t(key, params){
+    let s = (DICT && DICT[key]) || '';
+    if(params){
+      for(const k in params){ s = s.replaceAll(`{${k}}`, params[k]); }
+    }
+    return s || '';
+  }
+
+  function applyTextNodes(){
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const key = el.getAttribute('data-i18n');
+      const v = t(key);
+      if(v) el.textContent = v;
+    });
+  }
+
+  function applyPlaceholders(){
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+      const key = el.getAttribute('data-i18n-placeholder');
+      const v = t(key);
+      if(v) el.setAttribute('placeholder', v);
+    });
+  }
+
+  async function loadDict(){
+    CUR = localStorage.getItem(LANG_KEY) || 'ar';
+    try{
+      const res = await fetch(`/static/lang/${CUR}.json`);
+      DICT = await res.json();
+    }catch(_){
+      DICT = {};
+    }
+    applyTextNodes();
+    applyPlaceholders();
+  }
+
+  // مزامنة عند تغيير اللغة من أي مكان (base.html)
+  window.addEventListener('storage', e=>{
+    if(e.key === LANG_KEY){
+      loadDict();
+      // تحديث اتجاه الصفحة لو تغيّر من base
+      const lang = localStorage.getItem(LANG_KEY) || 'ar';
+      document.documentElement.lang = lang;
+      document.documentElement.dir  = (lang==='ar'?'rtl':'ltr');
+    }
+  });
+
+  // تحميل أولي
+  loadDict();
+
+  // نعرّف دوال ترجمة عامة للاستخدام داخل منطق الصفحة
+  window.__mail_i18n__ = {
+    t,
+    verdictLabel(v){
+      if(v==='خطر' || v==='danger')   return t('verdict_danger') || 'خطر';
+      if(v==='مشبوه' || v==='suspicious') return t('verdict_suspicious') || 'مشبوه';
+      if(v==='آمن' || v==='safe')     return t('verdict_safe') || 'آمن';
+      return v || '—';
+    },
+    // قائمة كلمات التصيّد حسب اللغة
+    phishyWords(){
+      // لو موجودة مصفوفة في القاموس استخدمها، وإلا استخدم الافتراضي الإنجليزي
+      if (Array.isArray(DICT['mail_phishy_words']) && DICT['mail_phishy_words'].length){
+        return DICT['mail_phishy_words'].map(String).map(w=>w.toLowerCase());
+      }
+      return ['urgent','verify','update','reset','free','gift','win','bonus','password','bank','paypal','code','otp','confirm','click','login'];
+    },
+    labels:{
+      scorePrefix(){ return t('score_label') || 'الدرجة:'; },
+      unable(){ return t('mail_unable') || 'تعذر التحليل'; },
+      enterData(){ return t('mail_enter_data') || 'أدخلي بيانات الرسالة'; },
+      netOrFormat(){ return t('mail_check_net_or_format') || 'تحقق من الاتصال أو صيغة البيانات.'; }
+    }
+  };
+})();
+</script>
+
+<script>
+(function(){
+  const card   = document.getElementById('mail-card');
+  const sender = document.getElementById('sender');
+  const subject= document.getElementById('subject');
+  const body   = document.getElementById('body');
+
+  const analyze= document.getElementById('analyzeBtn');
+  const paste  = document.getElementById('pasteBtn');
+  const clearB = document.getElementById('clearBtn');
+
+  const meter  = document.getElementById('meter');
+  const bar    = document.getElementById('bar');
+
+  const verdictWrap = document.getElementById('verdictWrap');
+  const badge  = document.getElementById('badge');
+  const scoreT = document.getElementById('scoreText');
+  const chips  = document.getElementById('chips');
+
+  const hlBox  = document.getElementById('hlBox');
+  const hlWords= document.getElementById('hlWords');
+
+  // تُسحب من طبقة i18n
+  function phishyList(){ return (window.__mail_i18n__ && window.__mail_i18n__.phishyWords()) || ['urgent','verify','update']; }
+  function L(key, params){ return (window.__mail_i18n__ && window.__mail_i18n__.t(key, params)) || ''; }
+  function verdictLabel(v){ return (window.__mail_i18n__ && window.__mail_i18n__.verdictLabel(v)) || v; }
+  const LBL = {
+    scorePrefix: ()=> (window.__mail_i18n__ && window.__mail_i18n__.labels.scorePrefix()) || 'الدرجة:',
+    unable:      ()=> (window.__mail_i18n__ && window.__mail_i18n__.labels.unable())      || 'تعذر التحليل',
+    enterData:   ()=> (window.__mail_i18n__ && window.__mail_i18n__.labels.enterData())   || 'أدخلي بيانات الرسالة',
+    netOrFormat: ()=> (window.__mail_i18n__ && window.__mail_i18n__.labels.netOrFormat()) || 'تحقق من الاتصال أو صيغة البيانات.'
+  };
+
+  function setLoading(on){
+    meter.hidden = !on;
+    analyze.disabled = on;
+    analyze.classList.toggle('loading', on);
+    if(on){ bar.style.width = '30%'; }
+  }
+
+  function colorize(v){
+    const localV = verdictLabel(v);
+    // نلوّن بناءً على التصنيف المنطقي (danger/suspicious/safe)
+    if(localV === verdictLabel('خطر') || localV.toLowerCase()==='danger'){
+      badge.style.background = 'rgba(239,68,68,.12)';
+      badge.style.color      = '#ef4444';
+      badge.style.borderColor= 'rgba(239,68,68,.40)';
+    }else if(localV === verdictLabel('مشبوه') || localV.toLowerCase()==='suspicious'){
+      badge.style.background = 'rgba(245,158,11,.14)';
+      badge.style.color      = '#f59e0b';
+      badge.style.borderColor= 'rgba(245,158,11,.40)';
+    }else{
+      badge.style.background = 'rgba(16,185,129,.12)';
+      badge.style.color      = '#10b981';
+      badge.style.borderColor= 'rgba(16,185,129,.35)';
+    }
+    badge.textContent = localV || '—';
+  }
+
+  function resetUI(){
+    verdictWrap.hidden = true;
+    chips.hidden = true;
+    chips.innerHTML = '';
+    scoreT.innerHTML = `<span data-i18n="score_label">${LBL.scorePrefix()}</span> —`;
+    hlBox.style.display = 'none';
+    hlWords.innerHTML = '';
+  }
+
+  function addChip(text){
+    const span = document.createElement('span');
+    span.className = 'chip';
+    span.textContent = text;
+    chips.appendChild(span);
+    chips.hidden = false;
+  }
+
+  function highlightBadWords(text){
+    const list = phishyList();
+    const found = [];
+    const lowered = text.toLowerCase();
+    list.forEach(w=>{ if(lowered.includes(w)) found.push(w); });
+    if(found.length){
+      hlBox.style.display = 'block';
+      hlWords.innerHTML = found.map(w=>`<span class="hl">${w}</span>`).join(' ');
+    }else{
+      hlBox.style.display = 'none';
+    }
+  }
+
+  async function run(){
+    const s  = (sender.value||'').trim();
+    const su = (subject.value||'').trim();
+    const b  = (body.value||'').trim();
+
+    if(!s && !su && !b){
+      resetUI();
+      verdictWrap.hidden = false;
+      colorize('مشبوه');
+      badge.textContent = LBL.enterData();
+      return;
+    }
+
+    resetUI();
+    setLoading(true);
+
+    try{
+      const r = await fetch("{{ url_for('api_email_check') }}", {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({sender:s, subject:su, body:b})
+      });
+      const data = await r.json();
+
+      bar.style.width = '85%';
+
+      colorize(data.verdict || 'مشبوه');
+
+      const scoreNum = (typeof data.score === 'number') ? data.score : null;
+      scoreT.innerHTML = `<span data-i18n="score_label">${LBL.scorePrefix()}</span> ${scoreNum!==null ? (scoreNum + '%') : '—'}`;
+      verdictWrap.hidden = false;
+
+      (data.reasons||[]).forEach(addChip);
+
+      if(b) highlightBadWords(b);
+
+    }catch(e){
+      colorize('مشبوه');
+      badge.textContent = LBL.unable();
+      verdictWrap.hidden = false;
+      addChip(LBL.netOrFormat());
+    }finally{
+      bar.style.width = '100%';
+      setTimeout(()=> setLoading(false), 240);
+    }
+  }
+
+  analyze.addEventListener('click', run);
+  body.addEventListener('keydown', e=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)) run(); });
+
+  paste.addEventListener('click', async ()=>{
+    try{
+      const t = await navigator.clipboard.readText();
+      if(!t) return;
+      const lines = t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      if(lines.length === 1){ body.value = t; }
+      else if(lines.length === 2){ sender.value = lines[0]; subject.value = lines[1]; }
+      else{
+        sender.value = lines[0] || '';
+        subject.value = lines[1] || '';
+        body.value    = lines.slice(2).join('\n');
+      }
+    }catch(_){}
+  });
+
+  clearB.addEventListener('click', ()=>{
+    sender.value = ''; subject.value = ''; body.value = '';
+    resetUI();
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,270 @@
+/* ========= Theme Variables ========= */
+:root {
+  /* Light */
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-2: #f1f4f9;
+  --text: #101828;
+  --muted: #667085;
+  --border: #e5eaf2;
+  --brand-1: #1e5aa6;
+  --brand-2: #0c8f79;
+  --shadow: 0 8px 24px rgba(16,24,40,.06);
+}
+
+html[data-theme="dark"] {
+  /* Dark */
+  --bg: #0c1220;
+  --surface: #121a2b;
+  --surface-2: #0e1526;
+  --text: #e6edf6;
+  --muted: #9aa6bf;
+  --border: #1e2b44;
+  --brand-1: #7bb2ff;
+  --brand-2: #5fe0c7;
+  --shadow: 0 12px 28px rgba(0,0,0,.35);
+}
+
+/* ========= Base ========= */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Kufi Arabic", Tahoma, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+/* Containers */
+.container { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+
+/* ========= Navbar ========= */
+.navbar { position: sticky; top: 0; z-index: 100; backdrop-filter: saturate(1.2) blur(8px); }
+.navbar .inner{
+  display:flex; align-items:center; gap:10px;
+  max-width:1200px; margin:0 auto; padding:10px 16px;
+  border-bottom:1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 75%, transparent);
+}
+.brand{ display:flex; align-items:center; gap:8px; font-weight:900; }
+.brand .logo{ font-size:20px }
+
+/* Links/Buttons in navbar */
+.navbar .btn.ghost{
+  color: var(--text);
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+}
+html[data-theme="dark"] .navbar .btn.ghost{
+  background: color-mix(in oklab, var(--surface) 55%, transparent);
+}
+
+/* ========= Buttons ========= */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:10px 14px; border-radius:12px; border:1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight:800; cursor:pointer; box-shadow: var(--shadow);
+  transition: transform .12s ease, box-shadow .12s ease, background .2s;
+}
+.btn:hover{ transform: translateY(-1px); }
+.btn:active{ transform: translateY(0); }
+.btn.primary{
+  background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
+  border: none; color: #fff;
+}
+
+/* ========= Card ========= */
+.card{
+  background: var(--surface);
+  border:1px solid var(--border);
+  border-radius:18px; padding:16px; box-shadow: var(--shadow);
+}
+.title{ font-size: clamp(18px,2.4vw,22px); font-weight:900; }
+
+/* ========= Inputs ========= */
+input, textarea, select {
+  width: 100%;
+  background: var(--surface-2);
+  color: var(--text);
+  border:1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border .12s, background .2s, box-shadow .12s;
+}
+input:focus, textarea:focus, select:focus{
+  border-color: color-mix(in oklab, var(--brand-1) 60%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-1) 20%, transparent);
+}
+
+/* Pin boxes default */
+.pin-boxes input{
+  width:44px; height:52px; text-align:center; font-weight:900; font-size:20px;
+}
+
+/* ========= Tables (monitor, إلخ) ========= */
+table{ width:100%; border-collapse: collapse; background: var(--surface); border:1px solid var(--border); border-radius: 14px; overflow: hidden; }
+thead th{ background: var(--surface-2); color: var(--muted); text-align: right; padding:10px; border-bottom:1px solid var(--border) }
+tbody td{ padding:10px; border-bottom:1px solid var(--border) }
+tbody tr:hover{ background: color-mix(in oklab, var(--surface-2) 70%, transparent) }
+
+/* ========= Toast ========= */
+.toast{
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 20px; padding: 10px 14px; border-radius: 12px;
+  background: var(--surface); border:1px solid var(--border); box-shadow: var(--shadow);
+  color: var(--text); font-weight: 800; z-index: 9999;
+}
+
+/* ========= Switch ========= */
+.switch{
+  position:relative; width:54px; height:32px; border-radius:999px;
+  border:1px solid var(--border); background: var(--surface-2);
+  display:inline-flex; align-items:center; justify-content:flex-start; padding:2px 4px; gap:6px;
+}
+.switch .knob{
+  width:26px; height:26px; border-radius:50%; background: var(--surface);
+  box-shadow: var(--shadow); transition: transform .18s ease;
+}
+.switch-label{ font-size:14px }
+html[data-theme="dark"] .switch .knob{ transform: translateX(20px); }
+
+/* Utilities */
+.muted{ color: var(--muted) }
+.hr{ border:0; height:1px; background: var(--border); margin:12px 0 }
+/* === THEME TOKENS ===================================================== */
+:root{
+  --bg:        #f6fbff;
+  --bg2:       #eef4fb;
+  --surface:   #ffffff;
+  --surface-2: #f9fbfe;
+  --text:      #0E1A2B;
+  --muted:     #7386a3;
+  --line:      #e6ebf3;
+
+  --primary:   #1E5AA6;
+  --teal:      #0C8F79;
+  --mint:      #12B07A;
+
+  --shadow:    0 10px 30px rgba(0,0,0,.08);
+  --radius:    18px;
+  --radius-sm: 12px;
+}
+
+/* Dark overrides */
+html[data-theme="dark"]{
+  --bg:        #0b1220;
+  --bg2:       #0b1220;
+  --surface:   #111a2b;
+  --surface-2: #0e1726;
+  --text:      #eaf2ff;
+  --muted:     #9fb2cc;
+  --line:      #21304a;
+
+  --primary:   #7fb3ff;
+  --teal:      #38d0bd;
+  --mint:      #47e1a6;
+
+  --shadow:    0 8px 22px rgba(0,0,0,.45);
+}
+
+/* === PAGE BACKGROUND ================================================== */
+body{
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 80% -10%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 60%),
+    radial-gradient(1200px 800px at -10% 10%, color-mix(in oklab, var(--teal) 10%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--bg), var(--bg2));
+}
+
+/* === GLOBAL UTILITIES ================================================= */
+.muted{ color: var(--muted) !important; }
+.hr{ border:0; border-top:1px solid var(--line); opacity:.9 }
+
+/* === NAVBAR (من base.html) =========================================== */
+.navbar{ background: color-mix(in oklab, var(--surface) 80%, transparent); border-bottom:1px solid var(--line) }
+.navbar .btn.ghost{ color: var(--text); border-color: var(--line); }
+.navbar .btn.ghost:hover{ background: color-mix(in oklab, var(--surface) 92%, transparent); }
+
+/* === CARDS / GLASS ==================================================== */
+.card{
+  background: var(--surface);
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+.glass{
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--surface) 60%, transparent),
+    color-mix(in oklab, var(--surface) 40%, transparent));
+  border:1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+/* === BUTTONS ========================================================== */
+.btn{
+  color: var(--text);
+  background: var(--surface);
+  border:1px solid var(--line);
+  border-radius:12px;
+}
+.btn.primary{
+  color:#fff;
+  background: linear-gradient(90deg, var(--primary), var(--teal));
+  border:none;
+  box-shadow: 0 8px 18px color-mix(in oklab, var(--primary) 30%, rgba(0,0,0,0));
+}
+.btn:disabled{ opacity:.6 }
+
+/* === KPIs ============================================================= */
+.kpi{
+  background: var(--surface);
+  border:1px solid var(--line);
+  color: var(--text);
+}
+.kpi .lbl{ color: var(--muted); }
+
+/* === PROGRESS BAR ===================================================== */
+.progress{ background: color-mix(in oklab, var(--surface) 85%, var(--bg)); border:1px solid var(--line) }
+.progress .fill{
+  background: linear-gradient(90deg, var(--mint), var(--teal), var(--primary));
+}
+
+/* === INPUTS (PIN boxes وغيرها) ======================================= */
+.input, input, textarea, select{
+  background: var(--surface);
+  color: var(--text);
+  border:1px solid var(--line);
+}
+.pin-boxes input{
+  background: var(--surface);
+  border:1px solid var(--line);
+  color: var(--text);
+  box-shadow:none;
+}
+.pin-boxes input:focus{
+  box-shadow: 0 6px 14px color-mix(in oklab, var(--primary) 15%, transparent);
+  border-color: color-mix(in oklab, var(--primary) 40%, var(--line));
+}
+
+/* === CHIP / TOAST ===================================================== */
+.chip{ background: var(--surface); border:1px solid var(--line); color: var(--text) }
+.chip.ok{ color: var(--teal) }
+.chip.bad{ color: #d65b63 }
+
+.toast{
+  background: var(--text);
+  color: color-mix(in oklab, #fff 95%, var(--text));
+  box-shadow: var(--shadow);
+}
+
+/* === LINKS / LIST DOTS ================================================ */
+a{ color: var(--primary); }
+ul li::marker{ color: var(--primary); }
+
+/* === MISC ============================================================= */
+#confetti, #bgparticles{ /* نفس الخلفية تعمل بالوضعين */ }

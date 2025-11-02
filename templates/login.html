@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}<span data-i18n="login_title">تجربة تسجيل الدخول</span>{% endblock %}
+
+{% block head %}
+<style>
+:root{
+  --bg:#0f172a; --card:#0b1220; --text:#e6f0ff; --muted:#94a3b8;
+  --border:1px solid rgba(148,163,184,.18);
+}
+html[data-theme="light"]{
+  --bg:#f6fbff; --card:#ffffff; --text:#0f172a; --muted:#6b7280;
+  --border:1px solid #e6eef6;
+}
+body{background:var(--bg);color:var(--text);}
+.navbar{display:none!important}
+#login-page{max-width:560px;margin:26px auto 32px;padding:0 16px}
+.title{display:flex;gap:10px;align-items:center;justify-content:center;margin:4px 0 6px}
+.title .ico{font-size:28px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.12))}
+.subtitle{text-align:center;color:var(--muted);margin:0 0 14px}
+#login-card{
+  background:var(--card);border:var(--border);
+  border-radius:18px;box-shadow:0 14px 30px rgba(0,0,0,.08);padding:16px;
+}
+.row{display:flex;gap:10px;align-items:center}
+.row+.row{margin-top:8px}
+.input{
+  flex:1;padding:12px 14px;border-radius:12px;border:var(--border);
+  background:var(--card);color:var(--text);outline:none;transition:.2s;
+}
+.input:focus{box-shadow:0 0 0 3px rgba(99,102,241,.18);border-color:rgba(99,102,241,.45)}
+.icon-btn,.btn{
+  padding:11px 14px;border-radius:12px;border:var(--border);
+  background:var(--card);color:var(--text);cursor:pointer;transition:.2s;
+}
+.btn.primary{
+  border:none;color:#fff;
+  background:linear-gradient(90deg,#6366F1,#3B82F6);
+  box-shadow:0 12px 24px rgba(59,130,246,.25);
+  font-weight:800;
+}
+.btn.primary:hover{transform:translateY(-1px) scale(1.02)}
+.btn.primary:disabled{opacity:.65;cursor:not-allowed}
+.waves{position:relative;width:0;height:0;pointer-events:none}
+.meter{position:relative;height:10px;border-radius:999px;overflow:hidden;
+  background:rgba(125,125,125,.18);border:var(--border);margin:10px 0 8px}
+.meter .bar{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#10b981);transition:width .35s}
+.status-line{display:flex;align-items:center;gap:10px;margin-top:4px}
+.badge{
+  padding:8px 12px;border-radius:999px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-weight:900;
+}
+.back{display:inline-flex;align-items:center;gap:6px;margin:0 auto 10px;font-weight:700}
+.theme-mini{
+  border:var(--border);background:var(--card);
+  border-radius:12px;padding:8px 10px;line-height:1;
+  box-shadow:0 10px 20px rgba(0,0,0,.08);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="login-page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <a class="back" href="{{ url_for('index') }}"><span class="arr">↩</span> <span data-i18n="login_back">رجوع</span></a>
+    <button id="localThemeToggle" class="icon-btn theme-mini" type="button">🌙</button>
+  </div>
+
+  <div class="title">
+    <div class="ico">🔑</div>
+    <h1 class="page-title" data-i18n="login_title">تجربة تسجيل الدخول</h1>
+  </div>
+  <p class="subtitle" data-i18n="login_subtitle">صفحة اختبار لتوليد محاولات دخول ومشاهدة لوحة المتابعة.</p>
+
+  <div id="login-card" class="card">
+    <div class="row">
+      <input id="user" class="input" type="text" data-i18n-placeholder="login_username" placeholder="اسم المستخدم">
+    </div>
+    <div class="row">
+      <input id="pass" class="input" type="password" data-i18n-placeholder="login_pin" placeholder="PIN (٤–٦ أرقام)">
+      <button id="togglePw" class="icon-btn">👁️</button>
+      <span class="waves" aria-hidden="true"></span>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <button id="reg" class="btn" style="background:linear-gradient(90deg,#0C8F79,#1E5AA6)" data-i18n="login_register">تسجيل جديد</button>
+      <button id="btn" class="btn primary" data-i18n="login_button">دخول</button>
+    </div>
+
+    <div id="meter" class="meter" hidden><div id="bar" class="bar"></div></div>
+    <div class="status-line" id="statusWrap" hidden>
+      <span id="badge" class="badge">—</span>
+      <span id="hint" class="muted"></span>
+    </div>
+    <div style="margin-top:12px;text-align:center">
+      <a href="{{ url_for('login_monitor') }}" data-i18n="login_view_monitor">عرض لوحة المتابعة</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // 🌐 الترجمة الديناميكية
+  const LANG_KEY='site_lang';
+  async function loadLang(lang){
+    try{
+      const res=await fetch(`/static/lang/${lang}.json`);
+      const dict=await res.json();
+      document.querySelectorAll('[data-i18n]').forEach(el=>{
+        const k=el.getAttribute('data-i18n'); if(dict[k]) el.textContent=dict[k];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+        const k=el.getAttribute('data-i18n-placeholder'); if(dict[k]) el.placeholder=dict[k];
+      });
+      localStorage.setItem(LANG_KEY,lang);
+      document.documentElement.lang=lang;
+      document.documentElement.dir=(lang==='ar')?'rtl':'ltr';
+    }catch(e){console.error(e);}
+  }
+  loadLang(localStorage.getItem(LANG_KEY)||'ar');
+</script>
+
+<script>
+(function(){
+  const card=document.getElementById('login-card');
+  const user=document.getElementById('user');
+  const pass=document.getElementById('pass');
+  const btn=document.getElementById('btn');
+  const reg=document.getElementById('reg');
+  const toggle=document.getElementById('togglePw');
+  const meter=document.getElementById('meter');
+  const bar=document.getElementById('bar');
+  const statusWrap=document.getElementById('statusWrap');
+  const badge=document.getElementById('badge');
+  const hint=document.getElementById('hint');
+
+  /* الثيم */
+  (function(){
+    const KEY='theme';const btn=document.getElementById('localThemeToggle');
+    const apply=t=>{document.documentElement.setAttribute('data-theme',t);
+      localStorage.setItem(KEY,t);btn.textContent=(t==='dark'?'☀️':'🌙');};
+    apply(localStorage.getItem(KEY)||'light');
+    btn.addEventListener('click',()=>{const next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';apply(next);});
+  })();
+
+  function setLoading(on){meter.hidden=!on;btn.disabled=on;card.classList.toggle('sending',on);if(on){bar.style.width='35%';}}
+  function setStatus(ok,msgTxt){
+    statusWrap.hidden=false;
+    badge.textContent=ok?localStorage.getItem('site_lang')==='en'?'Success':'نجاح':'فشل';
+    badge.style.background=ok?'rgba(16,185,129,.12)':'rgba(239,68,68,.12)';
+    badge.style.color=ok?'#10b981':'#ef4444';
+    badge.style.borderColor=ok?'rgba(16,185,129,.35)':'rgba(239,68,68,.4)';
+    hint.textContent=msgTxt;
+  }
+
+  async function login(){
+    const u=user.value.trim(),p=pass.value.trim();
+    if(!p){setStatus(false,localStorage.getItem('site_lang')==='en'?'Enter password.':'أدخلي كلمة المرور.');return;}
+    setLoading(true);
+    try{
+      const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,pin:p})});
+      const data=await r.json();
+      bar.style.width='85%';
+      if(data.ok||data.status==='ok'){
+        setStatus(true,localStorage.getItem('site_lang')==='en'?'Login successful (demo).':'تم تسجيل دخول ناجح (تجريبي).');
+        setTimeout(()=>window.location.href='/profile',1000);
+      }else setStatus(false,data.error||data.msg||(localStorage.getItem('site_lang')==='en'?'Login failed.':'فشل تسجيل الدخول.'));
+    }catch(e){setStatus(false,localStorage.getItem('site_lang')==='en'?'Connection error.':'خطأ في الاتصال.');}
+    finally{bar.style.width='100%';setTimeout(()=>setLoading(false),240);}
+  }
+
+  async function register(){
+    const u=user.value.trim(),p=pass.value.trim();
+    if(!u||!p){setStatus(false,localStorage.getItem('site_lang')==='en'?'Enter username & PIN.':'أدخلي اسم المستخدم وPIN');return;}
+    setLoading(true);
+    try{
+      const r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,pin:p}),credentials:'include'});
+      const data=await r.json();
+      bar.style.width='85%';
+      if(data.ok){
+        setStatus(true,localStorage.getItem('site_lang')==='en'?'🎉 Account created successfully!':'🎉 تم إنشاء الحساب بنجاح!');
+        setTimeout(()=>window.location.href='/profile',1000);
+      }else setStatus(false,data.error||(localStorage.getItem('site_lang')==='en'?'Account creation failed.':'فشل إنشاء الحساب.'));
+    }catch(e){setStatus(false,localStorage.getItem('site_lang')==='en'?'Connection error.':'خطأ في الاتصال');}
+    finally{bar.style.width='100%';setTimeout(()=>setLoading(false),240);}
+  }
+
+  toggle.addEventListener('click',()=>{pass.type=pass.type==='password'?'text':'password';});
+  btn.addEventListener('click',login);
+  reg.addEventListener('click',register);
+  pass.addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+})();
+</script>
+{% endblock %}

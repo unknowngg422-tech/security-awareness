@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}<span data-i18n="report_title">تقرير نتائج الاختبارات الأمنية</span>{% endblock %}
+
+{% block head %}
+<style>
+  :root {
+    --bg:#0f172a; --card:#0b1220; --text:#e6f0ff; --muted:#94a3b8;
+    --border:1px solid rgba(148,163,184,.18);
+  }
+  html[data-theme="light"] {
+    --bg:#f6fbff; --card:#ffffff; --text:#0f172a; --muted:#6b7280;
+    --border:1px solid #e6eef6;
+  }
+  body { background:var(--bg); color:var(--text); margin:0; font-family:"Cairo", sans-serif; }
+  .navbar { display:none !important; }
+
+  #report-page { max-width:1040px; margin:26px auto 34px; padding:0 16px; }
+  .card {
+    background:var(--card); border:var(--border);
+    border-radius:18px; box-shadow:0 14px 30px rgba(0,0,0,.08); padding:16px;
+  }
+  .title { display:flex; gap:10px; align-items:center; justify-content:center; margin:6px 0 10px; }
+  .subtitle { text-align:center; color:var(--muted); margin-bottom:18px; }
+
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:center; padding:10px 8px; border-bottom:1px solid rgba(125,125,125,.12); }
+  th { color:var(--muted); font-weight:800; }
+  tr:hover { background:rgba(125,125,125,.06); }
+
+  .level { font-weight:900; border-radius:999px; padding:6px 12px; display:inline-block; }
+  .lvl-excellent { background:rgba(16,185,129,.15); color:#10b981; }
+  .lvl-good { background:rgba(59,130,246,.15); color:#3b82f6; }
+  .lvl-warn { background:rgba(245,158,11,.15); color:#f59e0b; }
+  .lvl-bad { background:rgba(239,68,68,.15); color:#ef4444; }
+
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .btn { padding:8px 14px; border-radius:10px; background:var(--card); color:var(--text); border:var(--border); text-decoration:none; font-weight:800; }
+  .theme-btn { padding:8px 10px; border-radius:10px; border:var(--border); background:var(--card); cursor:pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="report-page">
+  <div class="topbar">
+   <a class="btn" href="{{ url_for('admin_panel') }}?pw=MySecret123" data-i18n="report_back">↩ رجوع للوحة الأدمن</a>
+    <button id="themeToggle" class="theme-btn">🌙</button>
+  </div>
+
+  <div class="title"><h1 data-i18n="report_title">📊 تقرير نتائج الاختبارات الأمنية</h1></div>
+  <p class="subtitle" data-i18n="report_subtitle">يعرض هذا التقرير أداء الموظفين في اختبار التوعية الأمنية ونقاط الضعف المحتملة.</p>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th data-i18n="report_col_weak">أكثر مجال فشل فيه</th>
+          <th data-i18n="report_col_user">الموظف</th>
+          <th data-i18n="report_col_attempts">عدد المحاولات</th>
+          <th data-i18n="report_col_avg">المتوسط (%)</th>
+          <th data-i18n="report_col_level">التصنيف</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table %}
+        <tr>
+          <td>{{ row.weak_cat }}</td>
+          <td>{{ row.username }}</td>
+          <td>{{ row.attempts }}</td>
+          <td>{{ row.avg }}</td>
+          <td>
+            {% if row.level == "ممتاز" %}
+              <span class="level lvl-excellent" data-i18n="level_excellent">ممتاز</span>
+            {% elif row.level == "جيد جدًا" %}
+              <span class="level lvl-good" data-i18n="level_verygood">جيد جدًا</span>
+            {% elif row.level == "يحتاج توعية" %}
+              <span class="level lvl-warn" data-i18n="level_warn">يحتاج توعية</span>
+            {% else %}
+              <span class="level lvl-bad" data-i18n="level_bad">ضعيف</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <canvas id="chart" style="margin-top:30px; width:100%; height:340px;"></canvas>
+  <div id="summary" style="margin-top:20px; text-align:center; font-weight:800; font-size:16px;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+  // 🌙 تبديل الوضع الداكن والفاتح
+  const btn = document.getElementById("themeToggle");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const root = document.documentElement;
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      localStorage.setItem("quiz_theme", next);
+      btn.textContent = next === "dark" ? "☀️" : "🌙";
+    });
+
+    const saved = localStorage.getItem("quiz_theme") || "dark";
+    document.documentElement.setAttribute("data-theme", saved);
+    btn.textContent = saved === "dark" ? "☀️" : "🌙";
+  }
+
+  // 📊 استيراد بيانات التقرير
+  const labels = JSON.parse('{{ table | map(attribute="username") | list | tojson | safe }}');
+  const dataVals = JSON.parse('{{ table | map(attribute="avg") | list | tojson | safe }}');
+  const levels = JSON.parse('{{ table | map(attribute="level") | list | tojson | safe }}');
+
+  // 🎨 إنشاء الرسم البياني
+  const ctxEl = document.getElementById("chart");
+  if (ctxEl && Array.isArray(labels) && Array.isArray(dataVals)) {
+    const ctx = ctxEl.getContext("2d");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "متوسط درجات الموظفين (%)",
+          data: dataVals,
+          backgroundColor: dataVals.map(v => 
+            v >= 85 ? "#10b981" : v >= 70 ? "#3b82f6" : v >= 50 ? "#f59e0b" : "#ef4444"
+          )
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        scales: { x: { max: 100, beginAtZero: true } },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  // 🧠 تحليل نتائج الفئات
+  const counts = { "ممتاز": 0, "جيد جدًا": 0, "يحتاج توعية": 0, "ضعيف": 0 };
+  if (Array.isArray(levels)) {
+    levels.forEach(l => { if (counts[l] !== undefined) counts[l]++; });
+  }
+
+  const summaryText =
+    `🟢 <span data-i18n="level_excellent">ممتاز</span>: ${counts["ممتاز"]}&nbsp;&nbsp;` +
+    `🔵 <span data-i18n="level_verygood">جيد جدًا</span>: ${counts["جيد جدًا"]}&nbsp;&nbsp;` +
+    `🟡 <span data-i18n="level_warn">يحتاج توعية</span>: ${counts["يحتاج توعية"]}&nbsp;&nbsp;` +
+    `🔴 <span data-i18n="level_bad">ضعيف</span>: ${counts["ضعيف"]}`;
+
+  const summaryEl = document.getElementById("summary");
+  if (summaryEl) summaryEl.innerHTML = summaryText;
+
+}); // نهاية DOMContentLoaded
+</script>
+{% endblock %}

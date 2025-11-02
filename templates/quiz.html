@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}<span data-i18n="quiz_title">اختبار أمني</span>{% endblock %}
+
+{% block head %}
+<style>
+  :root{
+    --bg:#0f172a; --card:#0b1220; --text:#e6f0ff; --muted:#94a3b8;
+    --border:1px solid rgba(148,163,184,.18);
+  }
+  html[data-theme="light"]{
+    --bg:#f6fbff; --card:#ffffff; --text:#0f172a; --muted:#6b7280;
+    --border:1px solid #e6eef6;
+  }
+  body{ background:var(--bg); color:var(--text); }
+  .navbar{ display:none !important; }
+  #quiz-page{ max-width:920px; margin:26px auto 34px; padding:0 16px; }
+
+  .title{ display:flex; gap:10px; align-items:center; justify-content:center; margin:4px 0 6px; }
+  .title .ico{ font-size:30px; filter:drop-shadow(0 6px 16px rgba(0,0,0,.12)); }
+  .subtitle{ text-align:center; color:var(--muted); margin:0 0 16px; }
+
+  .card{ background:var(--card); border:var(--border); border-radius:18px; box-shadow:0 14px 30px rgba(0,0,0,.08); padding:16px; }
+  .meter{ height:10px; background:rgba(125,125,125,.18); border:var(--border); border-radius:999px; overflow:hidden; margin:10px 0 8px; }
+  .meter .fill{ height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#10b981); transition:width .25s; }
+  .q{ border:var(--border); background:var(--card); border-radius:14px; padding:14px; margin:12px 0; box-shadow:0 10px 22px rgba(0,0,0,.06); animation:fadeInUp .35s ease; }
+  .q h3{ margin:0 0 10px; }
+  .choices{ display:grid; gap:8px; }
+  .choices button{ text-align:right; border:var(--border); background:var(--card); color:var(--text); border-radius:12px; padding:10px 12px; cursor:pointer; transition:.2s; }
+  .choices button:hover{ transform:translateY(-1px); box-shadow:0 10px 20px rgba(0,0,0,.08); }
+  .choices button.correct{ border-color:rgba(16,185,129,.45); background:rgba(16,185,129,.10); }
+  .choices button.wrong{ border-color:rgba(239,68,68,.45); background:rgba(239,68,68,.10); }
+  .choices button:disabled{ opacity:.75; cursor:not-allowed; }
+  .result{ border:var(--border); background:var(--card); border-radius:14px; padding:14px; margin:10px 0; box-shadow:0 10px 22px rgba(0,0,0,.06); }
+  .hidden{ display:none; }
+  .row.space-between{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .btn{ padding:10px 14px; border-radius:12px; border:var(--border); background:var(--card); cursor:pointer; color:var(--text); }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn.primary{ border:none; color:#fff; background:linear-gradient(90deg,#6366F1,#3B82F6); box-shadow:0 12px 24px rgba(59,130,246,.25); font-weight:800; }
+  .topbar{ display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:8px; }
+  .back{ display:inline-flex; align-items:center; gap:6px; font-weight:700; }
+  .back .arr{ transform:scaleX(-1); }
+  .theme{ padding:8px 12px; border-radius:12px; border:var(--border); background:var(--card); color:var(--text); cursor:pointer; font-weight:800; }
+  @keyframes fadeInUp{ from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="quiz-page">
+
+  <div class="topbar">
+    <a class="back" href="{{ url_for('index') }}"><span class="arr">↩</span> <span data-i18n="quiz_back">رجوع</span></a>
+    <button id="page-theme" class="theme" type="button" data-i18n="quiz_theme">🌙 وضع داكن</button>
+  </div>
+
+  <div class="title">
+    <div class="ico">🧠</div>
+    <h1 class="page-title" data-i18n="quiz_heading" style="margin:0">اختبار التوعية الأمنية</h1>
+  </div>
+
+  <div class="card">
+    <div class="meter"><div id="fill" class="fill"></div></div>
+    <p id="summary" class="muted" data-i18n="quiz_summary">أجبت على 0 / 0 — نتيجتك الحالية: 0 من 0</p>
+
+    <div id="final" class="result hidden"></div>
+    <div id="quiz"></div>
+
+    <div class="row space-between" style="margin-top:12px">
+      <span></span>
+      <button id="retry" class="btn primary" data-i18n="quiz_retry">اختبار جديد</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function(){
+  const THEME_KEY='page_theme';
+  const LANG_KEY='site_lang';
+  const root=document.documentElement;
+  const themeBtn=document.getElementById('page-theme');
+
+  // ✅ تحميل الترجمة
+  async function applyLang(lang){
+    try{
+      const res = await fetch(`/static/lang/${lang}.json`);
+      const dict = await res.json();
+      document.querySelectorAll('[data-i18n]').forEach(el=>{
+        const key = el.getAttribute('data-i18n');
+        if(dict[key]) el.textContent = dict[key];
+      });
+      localStorage.setItem(LANG_KEY, lang);
+      document.documentElement.lang = lang;
+      document.documentElement.dir = (lang==='ar'?'rtl':'ltr');
+    }catch(e){console.error('Lang load error', e);}
+  }
+
+  async function initLang(){
+    const saved = localStorage.getItem(LANG_KEY) || 'ar';
+    await applyLang(saved);
+  }
+
+  // ✅ الثيم
+  function applyTheme(mode){
+    root.setAttribute('data-theme', mode);
+    localStorage.setItem(THEME_KEY, mode);
+    const dict = {
+      ar: mode==='dark' ? '☀️ وضع نهاري' : '🌙 وضع داكن',
+      en: mode==='dark' ? '☀️ Light mode' : '🌙 Dark mode'
+    };
+    const lang = localStorage.getItem(LANG_KEY) || 'ar';
+    themeBtn.textContent = dict[lang];
+  }
+
+  applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+  themeBtn.addEventListener('click', ()=>{
+    const next = (root.getAttribute('data-theme')==='dark') ? 'light' : 'dark';
+    applyTheme(next);
+  });
+
+  await initLang();
+
+  const quizBox  = document.getElementById('quiz');
+  const retryBtn = document.getElementById('retry');
+  const fill     = document.getElementById('fill');
+  const summary  = document.getElementById('summary');
+  const finalBox = document.getElementById('final');
+  let score = 0, total = 0, finished = false;
+  let userAnswers = {};
+
+  function renderQuestions(list){
+    quizBox.innerHTML = '';
+    finalBox.classList.add('hidden');
+    finalBox.innerHTML = '';
+    finished = false;
+    score = 0; total = list.length;
+    userAnswers = {};
+
+    list.forEach((q, idx)=>{
+      const card = document.createElement('div');
+      card.className = 'q';
+      const h = document.createElement('h3');
+      const lang = localStorage.getItem(LANG_KEY) || 'ar';
+      const qPrefix = (lang === 'ar') ? `س${idx+1}: ` : `Q${idx+1}: `;
+      h.textContent = qPrefix + q.question;
+      card.appendChild(h);
+
+      const choices = document.createElement('div');
+      choices.className = 'choices';
+
+      q.options.forEach((text, i)=>{
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.onclick = ()=>{
+          if([...choices.children].some(b=>b.classList.contains('correct')||b.classList.contains('wrong'))) return;
+          [...choices.children].forEach(b=>{
+            if(b.textContent === q.options[q.answer]) b.classList.add('correct');
+          });
+          if(i !== q.answer){ btn.classList.add('wrong'); } else { score++; }
+          userAnswers[q.id] = i;
+          updateProgress();
+        };
+        choices.appendChild(btn);
+      });
+
+      card.appendChild(choices);
+      quizBox.appendChild(card);
+    });
+    updateProgress();
+  }
+
+  function updateProgress(){
+    const answered = [...document.querySelectorAll('.choices')].filter(group=>{
+      return [...group.children].some(b=>b.classList.contains('correct') || b.classList.contains('wrong'));
+    }).length;
+
+    const pct = total ? Math.round((answered/total)*100) : 0;
+    fill.style.width = pct + '%';
+    const lang = localStorage.getItem(LANG_KEY) || 'ar';
+    summary.textContent = (lang === 'ar')
+      ? `أجبت على ${answered} / ${total} — نتيجتك الحالية: ${score} من ${total}`
+      : `Answered ${answered} / ${total} — Your current score: ${score} of ${total}`;
+    if (!finished && answered === total) showFinal();
+  }
+
+  function showFinal(){
+    finished = true;
+    document.querySelectorAll('.choices button').forEach(b => b.disabled = true);
+
+    const percent = total ? Math.round((score/total)*100) : 0;
+    let levelAr = 'تحسين مطلوب';
+    let levelEn = 'Needs Improvement';
+    if (percent >= 90){ levelAr='ممتاز'; levelEn='Excellent'; }
+    else if (percent >= 75){ levelAr='جيد جداً'; levelEn='Very Good'; }
+    else if (percent >= 60){ levelAr='جيد'; levelEn='Good'; }
+
+    const lang = localStorage.getItem(LANG_KEY) || 'ar';
+    finalBox.innerHTML = (lang==='ar') ? `
+      <h3>🎯 نتيجتك النهائية</h3>
+      <p class="muted">أحرزت <strong>${score}</strong> من <strong>${total}</strong> (${percent}%). المستوى: <strong>${levelAr}</strong>.</p>
+      <ul class="muted" style="margin-top:8px"><li>اضغطي <strong>اختبار جديد</strong> لبدء مجموعة مختلفة.</li></ul>
+    ` : `
+      <h3>🎯 Your Final Score</h3>
+      <p class="muted">You scored <strong>${score}</strong> out of <strong>${total}</strong> (${percent}%). Level: <strong>${levelEn}</strong>.</p>
+      <ul class="muted" style="margin-top:8px"><li>Press <strong>New Quiz</strong> to start a new set of questions.</li></ul>
+    `;
+    finalBox.classList.remove('hidden');
+
+    fetch("{{ url_for('api_quiz_submit') }}", {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({score,total,answers:userAnswers,detail:{finishedAt:new Date().toISOString()}})
+    });
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  async function startQuiz(){
+    const lang = localStorage.getItem(LANG_KEY) || 'ar';
+    const file = (lang === 'en') ? '/static/lang/quiz_en.json' : '/static/lang/quiz_ar.json';
+    const res = await fetch(file);
+    const data = await res.json();
+    const shuffled = data.sort(()=>Math.random() - 0.5).slice(0,5);
+    renderQuestions(shuffled);
+  }
+
+  retryBtn.onclick = ()=> startQuiz();
+  startQuiz();
+})();
+</script>
+{% endblock %}

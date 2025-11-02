@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}<span data-i18n="monitor_title">لوحة متابعة الدخول</span>{% endblock %}
+
+{% block head %}
+<style>
+  :root{
+    --bg:#0f172a; --card:#0b1220; --text:#e6f0ff; --muted:#94a3b8;
+    --border:1px solid rgba(148,163,184,.18);
+  }
+  html[data-theme="light"]{
+    --bg:#f6fbff; --card:#ffffff; --text:#0f172a; --muted:#6b7280;
+    --border:1px solid #e6eef6;
+  }
+  body{ background:var(--bg); color:var(--text); }
+  .navbar{ display:none !important; }
+
+  #monitor-page{ max-width:1040px; margin:26px auto 34px; padding:0 16px; }
+
+  .title{ display:flex; gap:10px; align-items:center; justify-content:center; margin:4px 0 6px; }
+  .title .ico{ font-size:28px; filter:drop-shadow(0 6px 16px rgba(0,0,0,.12)); }
+  .subtitle{ text-align:center; color:var(--muted); margin:0 0 14px; }
+
+  .card{ background:var(--card); border:var(--border); border-radius:18px; box-shadow:0 14px 30px rgba(0,0,0,.08); padding:16px; }
+
+  .badge{ display:inline-block; padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card); color:var(--text); font-weight:800; }
+  .badge.ok{  background:rgba(16,185,129,.12); color:#10b981; border-color:rgba(16,185,129,.35); }
+  .badge.bad{ background:rgba(239,68,68,.12);  color:#ef4444;  border-color:rgba(239,68,68,.40); }
+  .badge.muted{ color:var(--muted); }
+
+  .alert.warn{ background:rgba(245,158,11,.12); color:#f59e0b; border:1px solid rgba(245,158,11,.35);
+    padding:10px 12px; border-radius:12px; margin:8px 0; }
+
+  .toolbar{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:8px 0 12px; }
+  .search{ min-width:220px; padding:10px 12px; border-radius:12px; border:var(--border);
+    background:var(--card); color:var(--text); outline:none; }
+
+  .btn{ padding:10px 14px; border-radius:12px; border:var(--border); background:var(--card); cursor:pointer; color:var(--text); }
+  .btn.primary{ border:none; color:#fff; background:linear-gradient(90deg,#6366F1,#3B82F6); box-shadow:0 12px 24px rgba(59,130,246,.25); font-weight:800; }
+
+  .table-wrap{ overflow:auto; border-radius:14px; border:var(--border); }
+  table.tbl{ width:100%; border-collapse:separate; border-spacing:0; min-width:760px; }
+  .tbl thead th{ position:sticky; top:0; background:var(--card); color:var(--muted);
+    font-weight:700; text-align:right; padding:12px 10px; border-bottom:1px solid rgba(125,125,125,.18); }
+  .tbl tbody td{ padding:12px 10px; border-bottom:1px solid rgba(125,125,125,.12); }
+  .tbl tbody tr:hover{ background:rgba(125,125,125,.06); }
+
+  .lang-btn{ position:fixed; top:10px; left:10px; z-index:100; padding:8px 14px; border-radius:14px; border:var(--border);
+    background:var(--card); color:var(--text); cursor:pointer; font-weight:700; }
+  .lang-btn:hover{ box-shadow:0 10px 20px rgba(0,0,0,.1); }
+
+  .theme-mini{ border:var(--border); background:var(--card); border-radius:12px;
+    padding:8px 10px; line-height:1; box-shadow:0 10px 20px rgba(0,0,0,.08); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="monitor-page">
+  <button id="langToggle" class="lang-btn">English 🌐</button>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <a class="back" href="{{ url_for('index') }}"><span class="arr">↩</span> <span data-i18n="monitor_back">رجوع</span></a>
+    <button id="localThemeToggle" class="btn theme-mini" type="button" title="وضع الليل/النهار">🌙</button>
+  </div>
+
+  <div class="title">
+    <div class="ico">📊</div>
+    <h1 class="page-title" data-i18n="monitor_title">لوحة متابعة محاولات الدخول</h1>
+  </div>
+  <p class="subtitle" data-i18n="monitor_subtitle">عرض التنبيهات وأحدث المحاولات (آخر 100 محاولة).</p>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
+      <h2 style="margin:0" data-i18n="monitor_alerts">التنبيهات النشطة</h2>
+      <a class="btn ghost" href="{{ url_for('login_page') }}" data-i18n="monitor_login_test">صفحة تجربة الدخول</a>
+    </div>
+
+    {% if alerts and alerts|length>0 %}
+      {% for a in alerts %}
+        <div class="alert warn" data-i18n="monitor_alert_prefix">تنبيه: {{ a.message }}</div>
+      {% endfor %}
+    {% else %}
+      <p class="muted" style="margin:8px 0 0" data-i18n="monitor_no_alerts">لا توجد تنبيهات حالياً.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <span class="badge muted" data-i18n="monitor_last100">آخر 100 محاولة</span>
+      <input id="search" class="search" type="text" placeholder="فلترة حسب المستخدم أو الـ IP…" data-i18n-placeholder="monitor_filter">
+    </div>
+
+    <div class="table-wrap">
+      <table class="tbl" id="attemptsTable">
+        <thead>
+          <tr>
+            <th data-i18n="monitor_col_time">الوقت</th>
+            <th data-i18n="monitor_col_user">المستخدم</th>
+            <th data-i18n="monitor_col_ip">IP</th>
+            <th data-i18n="monitor_col_result">النتيجة</th>
+            <th data-i18n="monitor_col_agent">Agent</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in attempts %}
+          <tr>
+            <td>{{ r.created_at }}</td>
+            <td>{{ r.username }}</td>
+            <td><span class="badge" data-copy="{{ r.ip }}" title="نسخ IP">{{ r.ip }}</span></td>
+            <td>
+              {% if r.success %}
+                <span class="badge ok" data-i18n="monitor_success">نجاح</span>
+              {% else %}
+                {% if r.risk_label == 'fail_bruteforce' %}
+                  <span class="badge bad" data-i18n="monitor_fail_brute">فشل (قوة غاشمة)</span>
+                {% else %}
+                  <span class="badge muted" data-i18n="monitor_fail_normal">فشل (طبيعي)</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td>{{ r.agent }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const LANG_KEY='site_lang';
+async function loadLang(lang){
+  try{
+    const res=await fetch(`/static/lang/${lang}.json`);
+    const dict=await res.json();
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const key=el.getAttribute('data-i18n');
+      if(dict[key]) el.textContent=dict[key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+      const key=el.getAttribute('data-i18n-placeholder');
+      if(dict[key]) el.placeholder=dict[key];
+    });
+    document.documentElement.lang=lang;
+    document.documentElement.dir=(lang==='ar')?'rtl':'ltr';
+    localStorage.setItem(LANG_KEY,lang);
+  }catch(e){console.error('Lang load error',e);}
+}
+
+const langBtn=document.getElementById('langToggle');
+let currentLang=localStorage.getItem(LANG_KEY)||'ar';
+loadLang(currentLang);
+langBtn.textContent=(currentLang==='ar')?'English 🌐':'العربية 🌐';
+
+langBtn.addEventListener('click',()=>{
+  currentLang=(currentLang==='ar')?'en':'ar';
+  loadLang(currentLang);
+  langBtn.textContent=(currentLang==='ar')?'English 🌐':'العربية 🌐';
+});
+</script>
+
+<script>
+(function(){
+  const search=document.getElementById('search');
+  const rows=Array.from(document.querySelectorAll('#attemptsTable tbody tr'));
+  search?.addEventListener('input',()=>{
+    const q=(search.value||'').toLowerCase();
+    rows.forEach(tr=>tr.style.display=tr.innerText.toLowerCase().includes(q)?'':'none');
+  });
+
+  document.querySelectorAll('[data-copy]').forEach(el=>{
+    el.addEventListener('click',async()=>{
+      try{await navigator.clipboard.writeText(el.dataset.copy);
+        el.style.transform='scale(1.05)';
+        setTimeout(()=>el.style.transform='',160);}catch(_){}
+    });
+  });
+
+  const KEY='theme';
+  const btn=document.getElementById('localThemeToggle');
+  const apply=(t)=>{
+    document.documentElement.setAttribute('data-theme',t);
+    localStorage.setItem(KEY,t);
+    btn.textContent=(t==='dark')?'☀️':'🌙';
+  };
+  const saved=localStorage.getItem(KEY)||'light';
+  apply(saved);
+  btn.addEventListener('click',()=>{
+    const next=(document.documentElement.getAttribute('data-theme')==='dark')?'light':'dark';
+    apply(next);
+  });
+})();
+</script>
+{% endblock %}
