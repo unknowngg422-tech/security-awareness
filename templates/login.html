@@ -69,7 +69,6 @@ body{background:var(--bg);color:var(--text);}
     <div class="ico">🔑</div>
     <h1 class="page-title" data-i18n="login_title">تجربة تسجيل الدخول</h1>
   </div>
-  <p class="subtitle" data-i18n="login_subtitle">صفحة اختبار لتوليد محاولات دخول ومشاهدة لوحة المتابعة.</p>
 
   <div id="login-card" class="card">
     <div class="row">
@@ -90,9 +89,7 @@ body{background:var(--bg);color:var(--text);}
       <span id="badge" class="badge">—</span>
       <span id="hint" class="muted"></span>
     </div>
-    <div style="margin-top:12px;text-align:center">
-      <a href="{{ url_for('login_monitor') }}" data-i18n="login_view_monitor">عرض لوحة المتابعة</a>
-    </div>
+    
   </div>
 </div>
 {% endblock %}
