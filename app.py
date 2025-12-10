@@ -21,9 +21,7 @@ from flask import Blueprint
 from datetime import timedelta as dt_timedelta
 import time
 
-# =========================================================
 # ================ App & Config ===========================
-# =========================================================
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -33,34 +31,31 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static")
 )
 
-# !! غيّري السر هذا لقيمة عشوائية طويلة في الإنتاج
+
 app.secret_key = "CHANGE_ME_SECRET_KEY_!@#_RANDOM"
 
-# إعدادات كوكيز السيشن (أمان)
+
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",   # غيّريها "Strict" حسب حاجتك
     SESSION_COOKIE_SECURE=False      # اجعليها True خلف HTTPS
 )
 
-# ⚠️: سلوك بدء التشغيل: احذف قاعدة البيانات القديمة تلقائيًا (لتبدأ من الصفر).
-# غيّريه إلى False إذا تريدين تعطيله.
+
 RESET_DB_ON_START = False
 
 DB_PATH = os.path.join(BASE_DIR, "database.db")
 
 # =============== Admin Password ===============
-# غيّريها لشي قوي
+
 ADMIN_PASSWORD = "MySecret123"
 
-# =========================================================
 # ================ DB Helpers =============================
-# =========================================================
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA foreign_keys = ON;")
-    # return rows as tuples (default) — كافي لهذا المشروع
+
     return conn
 
 def _utcnow():
@@ -70,9 +65,7 @@ def _client_ip():
     return (request.headers.get("X-Forwarded-For", request.remote_addr or "-")
             .split(",")[0].strip())
 
-# =========================================================
 # ================ Schema Init ============================
-# =========================================================
 
 def init_core_tables():
     """Core domain tables (password/url/email/quiz logs)."""
@@ -197,9 +190,7 @@ def init_users_and_gamify():
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_events_user_time ON point_events(user_id, created_at);")
 
-# =========================================================
 # ================ Request/User Helpers ===================
-# =========================================================
 
 @app.before_request
 def load_user():
@@ -280,11 +271,11 @@ def load_role():
     g.user_id = None
 
     try:
-        # ✅ لو المستخدم داخل الجلسة نحمل بياناته
+        # لو المستخدم داخل الجلسة نحمل بياناته
         if "uid" in session:
             g.user_id = session["uid"]
 
-            # ✅ نجيب الدور الحقيقي من قاعدة البيانات
+            # اجيب الدور الحقيقي من قاعدة البيانات
             with get_conn() as conn:
                 row = conn.execute("SELECT role FROM users WHERE id=?", (g.user_id,)).fetchone()
                 if row and row[0]:
@@ -319,9 +310,8 @@ def _ensure_role_column_once():
         pass
     app.config["_ROLE_COL_DONE"] = True
 
-# =========================================================
+
 # ================ Auth (Register/Login/Logout) ===========
-# =========================================================
 
 @app.post("/api/auth/register")
 def api_register():
@@ -408,7 +398,7 @@ def api_login_user():
     uid = int(row[0])
     role = row[2] if len(row) > 2 else "public"
 
-    # ✅ اجعل هذا المستخدم أدمن تلقائيًا لو كان اسمه يطابق حسابك
+    # انااا 
     if username.lower() == "bnoo":
         with get_conn() as conn:
             conn.execute("UPDATE users SET role='admin' WHERE id=?", (uid,))
@@ -455,9 +445,7 @@ def api_auth_session():
             "logged_in": False
         })
 
-# =========================================================
 # ================ Gamification APIs ======================
-# =========================================================
 
 @app.get("/api/gamify/status")
 def api_gamify_status():
@@ -529,9 +517,7 @@ def api_claim_daily():
 
     return jsonify({"ok": True, "bonus": bonus, "streak": streak})
 
-# =========================================================
 # ================ Security Analysis: Passwords ===========
-# =========================================================
 
 try:
     from zxcvbn import zxcvbn
@@ -687,10 +673,8 @@ def api_password_score():
         "pwned": pwned
     }), 200
 
-# =========================================================
 # ================ Security Analysis: URLs ================
 # (UNCHANGED logic — included for completeness)
-# =========================================================
 
 def analyze_url_local(url: str):
     reasons, score = [], 100
@@ -781,9 +765,7 @@ def api_url_check():
     _grant_points(3, kind="url", meta={"verdict": result.get("verdict"), "score": result.get("score")})
     return jsonify(result), 200
 
-# =========================================================
 # ================ Security Analysis: Emails ==============
-# =========================================================
 
 def analyze_email(sender: str, subject: str, body: str):
     reasons, score = [], 100
@@ -828,9 +810,7 @@ def api_email_check():
     _grant_points(3, kind="email", meta={"verdict": result.get("verdict"), "score": result.get("score")})
     return jsonify(result), 200
 
-# =========================================================
 # ====== (NEW) Secure Ingest for Login Attempts (HMAC) ====
-# =========================================================
 
 import hmac
 
@@ -895,9 +875,7 @@ def ingest_login_attempt():
 
     return jsonify({"ok": True, "risk_label": label}), 200
 
-# =========================================================
 # ================ Fake Login Monitor (Demo) ==============
-# =========================================================
 
 def detect_bruteforce_window(conn, minutes=10, fail_threshold=5, username_filter: str | None = None):
     cur = conn.cursor()
@@ -961,9 +939,8 @@ def detect_bruteforce_window(conn, minutes=10, fail_threshold=5, username_filter
         })
     return alerts
 
-# =========================================================
 # 🧩 Proxy Login Endpoint — Converts /api/login → /api/auth/login
-# =========================================================
+
 @app.post("/api/login")
 def proxy_api_login():
     try:
@@ -1010,9 +987,9 @@ def proxy_api_login():
     except Exception as e:
         return jsonify({"status": "fail", "msg": f"⚠️ خطأ داخلي: {e}"}), 500
 
-# =========================================================
+
 # ================ Monitor Page ===========================
-# =========================================================
+
 @app.route("/login-monitor")
 def login_monitor():
     if not _is_staff():
@@ -1059,9 +1036,7 @@ def login_monitor():
 
     return render_template("monitor.html", attempts=rows, alerts=alerts, scoped=bool(username_filter), me=me, is_admin=_is_admin())
 
-# =========================================================
 # ================ Quiz ===================================
-# =========================================================
 
 def load_questions():
     path = os.path.join(BASE_DIR, "quiz_questions.json")
@@ -1131,7 +1106,7 @@ def api_quiz_submit():
     answers = data.get("answers", {})  # ✅ من الواجهة الجديدة
     detail = {}
 
-    # 🔹 نحمل ملف الأسئلة مع التصنيفات
+    # يجمل ملف الاسئلة
     try:
         with open("quiz_questions.json", "r", encoding="utf-8") as f:
             questions = json.load(f)
@@ -1139,7 +1114,7 @@ def api_quiz_submit():
         print("⚠️ failed to load quiz_questions.json:", e)
         questions = []
 
-    # 🔹 نبني detail يحتوي على: رقم السؤال + هل صح أو خطأ + التصنيف
+    # التصنيف
     for q in questions:
         qid = str(q.get("id"))
         cat = q.get("category", "غير محدد")
@@ -1151,10 +1126,9 @@ def api_quiz_submit():
             "category": cat
         }
 
-    # ✅ نجيب user_id من الجلسة
     user_id = session.get("uid")
 
-    # 🔸 حفظ النتيجة في قاعدة البيانات
+    #  حفظ النتيجة في قاعدة البيانات
     try:
         with get_conn() as conn:
             conn.execute("""
@@ -1168,7 +1142,7 @@ def api_quiz_submit():
     except Exception as e:
         print("⚠️ quiz insert error:", e)
 
-    # 🎁 حساب النقاط والمكافأة
+    # حساب النقاط والمكافأة
     bonus = 0
     try:
         if total > 0:
@@ -1424,9 +1398,7 @@ def admin_update_user():
 
     return "تم التعديل."
 
-# =========================================================
 # ================ Admin: Quiz Report =====================
-# =========================================================
 
 @app.route("/admin/quiz-report")
 def admin_quiz_report():
@@ -1466,7 +1438,7 @@ def admin_quiz_report():
         results[username]["scores"].append(percent)
         results[username]["dates"].append(created)
 
-        # ✅ تحليل الفئات حسب detail_json
+        #  تحليل الفئات حسب detail_json
         try:
             detail = json.loads(detail_json or "{}")
             for qid, qdata in detail.items():
@@ -1487,7 +1459,7 @@ def admin_quiz_report():
             "ضعيف"
         )
 
-        # 🔍 نحدد أكثر نوع أخطأ فيه
+        # نقطة ضعفه!
         weak_cat = "—"
         if data["fails"]:
             weak_cat = max(data["fails"], key=data["fails"].get)
@@ -1504,9 +1476,7 @@ def admin_quiz_report():
 
     return render_template("quiz_report.html", table=table)
 
-# =========================================================
 # ================ Pages ==================================
-# =========================================================
 
 @app.route("/")
 def index():
@@ -1594,9 +1564,7 @@ def api_claim_daily_v2():
 
     return jsonify({"ok": True, "added": 10, "points": points, "streak": streak})
 
-# =========================================================
 # ================ Boot & DB Reset ========================
-# =========================================================
 
 def upgrade_existing_db():
     """
@@ -1641,7 +1609,7 @@ def init_all():
     init_users_and_gamify()
 
 if __name__ == "__main__":
-    # حذف قاعدة البيانات القديمة إذا طُلب ذلك — لإعادة ضبط كاملة كما طلبتِ
+    #حذف قاعدة البيانات القديمة إذا انطلب
     if RESET_DB_ON_START and os.path.exists(DB_PATH):
         try:
             os.remove(DB_PATH)
@@ -1649,7 +1617,7 @@ if __name__ == "__main__":
         except Exception as e:
             print("خطأ أثناء حذف قاعدة البيانات القديمة:", e)
 
-    # تهيئة الجداول
+    # تهيئة 
     init_all()
-    # تشغيل الخادم
+    # تشغيل 
     app.run(host="0.0.0.0", port=5000, debug=True)
